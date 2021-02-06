@@ -15,8 +15,10 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat.checkSelfPermission
 import androidx.core.text.isDigitsOnly
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import com.example.storeadmin.databinding.FragmentAddProductBinding
 import com.example.storeadmin.models.Product
+import com.example.storeadmin.viewmodels.AddProductViewModel
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import java.io.ByteArrayOutputStream
@@ -26,12 +28,13 @@ class AddProductFragment : Fragment(), View.OnClickListener {
     private lateinit var firestore: FirebaseFirestore
     private val PERMISSION_CODE = 0
     private val IMAGE_PICK_CODE = 1
-    var imageName = ""
+    private val model: AddProductViewModel by activityViewModels()
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         binding = FragmentAddProductBinding.inflate(inflater, container, false)
+
         firestore = FirebaseFirestore.getInstance()
         binding.addProductB.setOnClickListener(this)
         binding.selectImageB.setOnClickListener(this)
@@ -63,12 +66,14 @@ class AddProductFragment : Fragment(), View.OnClickListener {
                 image = null
             )
             if (productIsValid(product)) {
+                disableEditTexts()
                 val bitmap = (binding.productImg.drawable as BitmapDrawable).bitmap
                 val baos = ByteArrayOutputStream()
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos)
                 val data = baos.toByteArray()
 
-                val storageRef = FirebaseStorage.getInstance().reference.child("Images/$imageName")
+                val storageRef =
+                    FirebaseStorage.getInstance().reference.child("Images/${model.imageName}")
                 storageRef.putBytes(data).addOnSuccessListener {
                     storageRef.downloadUrl.addOnSuccessListener {
                         product.image = it.toString()
@@ -108,19 +113,32 @@ class AddProductFragment : Fragment(), View.OnClickListener {
         if (product.size.isEmpty()) {
             binding.sizeETxt.error = "Enter valid data"
         }
+        if (model.imageName.isEmpty()) {
+            Toast.makeText(requireContext(), "Image not selected", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun disableEditTexts() {
+        binding.codeETxt.isEnabled = false
+        binding.colorsETxt.isEnabled = false
+        binding.materialETxt.isEnabled = false
+        binding.sizeETxt.isEnabled = false
+        binding.priceETxt.isEnabled = false
+        binding.selectImageB.isEnabled = false
+        binding.addProductB.isEnabled = false
     }
 
     private fun productIsValid(product: Product): Boolean {
         return product.code.isNotEmpty() &&
                 product.colors.isNotEmpty() &&
-                imageName.isNotEmpty() &&
+                model.imageName.isNotEmpty() &&
                 product.material.isNotEmpty() &&
                 product.size.isNotEmpty()
     }
 
     private fun pickImage() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (checkSelfPermission(context!!, Manifest.permission.READ_EXTERNAL_STORAGE) ==
+            if (checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) ==
                 PackageManager.PERMISSION_DENIED
             ) {
                 //permission denied
@@ -167,7 +185,7 @@ class AddProductFragment : Fragment(), View.OnClickListener {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (resultCode == Activity.RESULT_OK && requestCode == IMAGE_PICK_CODE) {
             binding.productImg.setImageURI(data?.data)
-            imageName = data?.data?.path!!
+            model.imageName = data?.data?.lastPathSegment!!
         }
     }
 }
