@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Al-Mira</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="code">Code</string>
+    <string name="colors">Colors</string>
+    <string name="size">Size</string>
+    <string name="material">Material</string>
+    <string name="price">Price</string>
+    <string name="add">Add</string>
+    <string name="details">Details</string>
+</resources>

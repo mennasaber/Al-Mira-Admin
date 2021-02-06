@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "634543947217",
+    "project_id": "al-mira-store",
+    "storage_bucket": "al-mira-store.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:634543947217:android:22b4760cb9692d4f4534f0",
+        "android_client_info": {
+          "package_name": "com.example.storeadmin"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "634543947217-ljar9tb72o903kju3gqdvu9cfmlj0if2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.storeadmin",
+            "certificate_hash": "51711a5d4a974b28ed9c26d66473ce3c4c04a959"
+          }
+        },
+        {
+          "client_id": "634543947217-7qcpgeaeds9mcfn4soa5l1opjjmsekc6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9h3-nEQnwiWzaGEfzMX0Wz8DXVmaIk9A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "634543947217-7qcpgeaeds9mcfn4soa5l1opjjmsekc6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
