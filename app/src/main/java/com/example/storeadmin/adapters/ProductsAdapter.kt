@@ -4,12 +4,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.os.bundleOf
+import androidx.navigation.NavController
 import androidx.recyclerview.widget.RecyclerView
 import com.example.storeadmin.R
 import com.example.storeadmin.models.Product
 
 
-class ProductsAdapter(var productsList: List<Product>) :
+class ProductsAdapter(var productsList: List<Product>, var navController: NavController) :
     RecyclerView.Adapter<ProductsAdapter.ProductsViewHolder>() {
     class ProductsViewHolder(var view: View) : RecyclerView.ViewHolder(view) {
         val codeTxt = view.findViewById<TextView>(R.id.codeTxt)
@@ -22,6 +24,12 @@ class ProductsAdapter(var productsList: List<Product>) :
 
     override fun onBindViewHolder(holder: ProductsViewHolder, position: Int) {
         holder.codeTxt.text = productsList[position].code
+        holder.itemView.setOnClickListener {
+            navController.navigate(
+                R.id.action_mainFragment_to_editFragment,
+                bundleOf("product" to productsList[position])
+            )
+        }
     }
 
     override fun getItemCount(): Int {

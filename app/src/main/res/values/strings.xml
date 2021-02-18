@@ -10,4 +10,7 @@
     <string name="add">Add</string>
     <string name="details">Details</string>
     <string name="code_">Code:</string>
+    <string name="update">Update</string>
+    <string name="save">Save</string>
+    <string name="offer">Offer</string>
 </resources>

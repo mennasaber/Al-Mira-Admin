@@ -32,6 +32,7 @@ class AddProductFragment : Fragment(), View.OnClickListener {
     private lateinit var toolbarBinding: LayoutTopBackToolbarBinding
     private lateinit var navController: NavController
     private lateinit var firestore: FirebaseFirestore
+    private lateinit var codes: ArrayList<String>
     private val PERMISSION_CODE = 0
     private val IMAGE_PICK_CODE = 1
     private val model: AddProductViewModel by activityViewModels()
@@ -51,6 +52,11 @@ class AddProductFragment : Fragment(), View.OnClickListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         navController = Navigation.findNavController(view)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        codes = requireArguments().getStringArrayList("codes")!!
     }
 
     override fun onClick(v: View?) {
@@ -142,6 +148,9 @@ class AddProductFragment : Fragment(), View.OnClickListener {
         if (model.imageName.isEmpty()) {
             Toast.makeText(requireContext(), "Image not selected", Toast.LENGTH_SHORT).show()
         }
+        if (codes.contains(product.code)) {
+            binding.codeETxt.error = "There is product with same code"
+        }
     }
 
     private fun disableEditTexts() {
@@ -160,7 +169,8 @@ class AddProductFragment : Fragment(), View.OnClickListener {
                 product.colors.isNotEmpty() &&
                 model.imageName.isNotEmpty() &&
                 product.material.isNotEmpty() &&
-                product.size.isNotEmpty()
+                product.size.isNotEmpty() &&
+                !codes.contains(product.code)
     }
 
     private fun pickImage() {

@@ -8,12 +8,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 
 class MainViewModel : ViewModel() {
-    private val productsCodes: MutableLiveData<ArrayList<Product>> = MutableLiveData()
+    var spinnerPosition: Int=0
+    private val products: MutableLiveData<ArrayList<Product>> = MutableLiveData()
     fun getProductsCodes(): LiveData<ArrayList<Product>> {
         FirebaseFirestore.getInstance().collection("Products").addSnapshotListener { it, _ ->
-            productsCodes.postValue(it?.let { it1 -> toProducts(it1) })
+            products.postValue(it?.let { it1 -> toProducts(it1) })
         }
-        return productsCodes
+        return products
     }
 
     private fun toProducts(it: QuerySnapshot): ArrayList<Product> {
@@ -27,7 +28,8 @@ class MainViewModel : ViewModel() {
                 image = document["image"] as String?,
                 price = (document["price"] as Double).toFloat(),
                 details = document["details"] as String,
-                size = document["size"] as String
+                size = document["size"] as String,
+                offer = (document["offer"] as Double).toFloat()
             )
             list.add(product)
         }
