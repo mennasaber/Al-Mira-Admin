@@ -18,7 +18,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
-            <include layout="@layout/layout_top_back_toolbar" />
+            <include layout="@layout/layout_top_edit_toolbar" />
         </LinearLayout>
 
         <androidx.cardview.widget.CardView

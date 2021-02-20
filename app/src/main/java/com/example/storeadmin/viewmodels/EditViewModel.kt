@@ -20,6 +20,7 @@ class EditViewModel : ViewModel() {
             storageRef.downloadUrl.addOnSuccessListener { uri ->
                 FirebaseStorage.getInstance().getReferenceFromUrl(product.image!!).delete()
                     .addOnSuccessListener {
+                        imageName = ""
                         product.image = uri.toString()
                         product.id?.let { id ->
                             FirebaseFirestore.getInstance().collection("Products").document(id)
@@ -28,5 +29,14 @@ class EditViewModel : ViewModel() {
                     }
             }
         }
+    }
+
+    fun deleteProduct(product: Product) {
+        FirebaseStorage.getInstance().getReferenceFromUrl(product.image!!).delete()
+            .addOnSuccessListener {
+                product.id?.let {
+                    FirebaseFirestore.getInstance().collection("Products").document(it).delete()
+                }
+            }
     }
 }

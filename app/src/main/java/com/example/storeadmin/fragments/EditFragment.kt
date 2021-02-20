@@ -19,16 +19,18 @@ import androidx.navigation.NavController
 import androidx.navigation.Navigation
 import com.example.storeadmin.R
 import com.example.storeadmin.databinding.FragmentEditBinding
-import com.example.storeadmin.databinding.LayoutTopBackToolbarBinding
+import com.example.storeadmin.databinding.LayoutTopEditToolbarBinding
 import com.example.storeadmin.models.Product
 import com.example.storeadmin.viewmodels.EditViewModel
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import com.squareup.picasso.Callback
 import com.squareup.picasso.Picasso
 import java.io.ByteArrayOutputStream
 
 class EditFragment : Fragment(), View.OnClickListener {
     private lateinit var binding: FragmentEditBinding
-    private lateinit var toolbarBinding: LayoutTopBackToolbarBinding
+    private lateinit var toolbarBinding: LayoutTopEditToolbarBinding
     private lateinit var navController: NavController
     private lateinit var product: Product
     private val PERMISSION_CODE = 0
@@ -39,7 +41,7 @@ class EditFragment : Fragment(), View.OnClickListener {
         savedInstanceState: Bundle?
     ): View {
         binding = FragmentEditBinding.inflate(inflater, container, false)
-        toolbarBinding = LayoutTopBackToolbarBinding.bind(binding.root)
+        toolbarBinding = LayoutTopEditToolbarBinding.bind(binding.root)
 
         return binding.root
     }
@@ -74,6 +76,7 @@ class EditFragment : Fragment(), View.OnClickListener {
             }
         })
         toolbarBinding.backB.setOnClickListener(this)
+        toolbarBinding.deleteB.setOnClickListener(this)
         binding.updateB.setOnClickListener(this)
         binding.selectImageB.setOnClickListener(this)
     }
@@ -84,10 +87,9 @@ class EditFragment : Fragment(), View.OnClickListener {
                 updateProductOBJ()
                 if (productIsValid(product)) {
                     if (model.imageName.isEmpty())
-                        model.updateProduct(product)
+                        updateProduct(product)
                     else
-                        model.updateProductWithImage(product, convertImageToByte())
-                    Toast.makeText(requireContext(), "Updated", Toast.LENGTH_SHORT).show()
+                        updateProductWithImage(product, convertImageToByte())
                 } else
                     produceError(product)
             }
@@ -97,7 +99,26 @@ class EditFragment : Fragment(), View.OnClickListener {
             binding.selectImageB.id -> {
                 pickImage()
             }
+            toolbarBinding.deleteB.id -> {
+                deleteProduct(product)
+            }
         }
+    }
+
+    private fun deleteProduct(product: Product) {
+        setupEditTexts(false)
+        binding.progressBar1.visibility = View.VISIBLE
+        FirebaseStorage.getInstance().getReferenceFromUrl(product.image!!).delete()
+            .addOnSuccessListener {
+                product.id?.let {
+                    FirebaseFirestore.getInstance().collection("Products").document(it).delete()
+                        .addOnSuccessListener {
+                            Toast.makeText(requireContext(), "Deleted", Toast.LENGTH_SHORT).show()
+                            binding.progressBar1.visibility = View.INVISIBLE
+                            navController.navigate(R.id.action_editFragment_to_mainFragment)
+                        }
+                }
+            }
     }
 
     private fun updateProductOBJ() {
@@ -122,14 +143,14 @@ class EditFragment : Fragment(), View.OnClickListener {
         }
     }
 
-    private fun disableEditTexts() {
-        binding.colorsETxt.isEnabled = false
-        binding.materialETxt.isEnabled = false
-        binding.sizeETxt.isEnabled = false
-        binding.priceETxt.isEnabled = false
-        binding.selectImageB.isEnabled = false
-        binding.detailsETxt.isEnabled = false
-        binding.offerETxt.isEnabled = false
+    private fun setupEditTexts(state: Boolean) {
+        binding.colorsETxt.isEnabled = state
+        binding.materialETxt.isEnabled = state
+        binding.sizeETxt.isEnabled = state
+        binding.priceETxt.isEnabled = state
+        binding.selectImageB.isEnabled = state
+        binding.detailsETxt.isEnabled = state
+        binding.offerETxt.isEnabled = state
     }
 
     private fun productIsValid(product: Product): Boolean {
@@ -199,5 +220,43 @@ class EditFragment : Fragment(), View.OnClickListener {
         val baos = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos)
         return baos.toByteArray()
+    }
+
+    private fun updateProduct(product: Product) {
+        binding.progressBar1.visibility = View.VISIBLE
+        setupEditTexts(false)
+        product.id?.let {
+            FirebaseFirestore.getInstance().collection("Products").document(it).set(product)
+                .addOnSuccessListener {
+                    binding.progressBar1.visibility = View.INVISIBLE
+                    setupEditTexts(true)
+                    Toast.makeText(requireContext(), "Updated", Toast.LENGTH_SHORT).show()
+                }
+        }
+    }
+
+    private fun updateProductWithImage(product: Product, image: ByteArray) {
+        binding.progressBar1.visibility = View.VISIBLE
+        setupEditTexts(false)
+        val storageRef =
+            FirebaseStorage.getInstance().reference.child("Images/${model.imageName}")
+        storageRef.putBytes(image).addOnSuccessListener {
+            storageRef.downloadUrl.addOnSuccessListener { uri ->
+                FirebaseStorage.getInstance().getReferenceFromUrl(product.image!!).delete()
+                    .addOnSuccessListener {
+                        model.imageName = ""
+                        product.image = uri.toString()
+                        product.id?.let { id ->
+                            FirebaseFirestore.getInstance().collection("Products").document(id)
+                                .set(product).addOnSuccessListener {
+                                    binding.progressBar1.visibility = View.INVISIBLE
+                                    setupEditTexts(true)
+                                    Toast.makeText(requireContext(), "Updated", Toast.LENGTH_SHORT)
+                                        .show()
+                                }
+                        }
+                    }
+            }
+        }
     }
 }
