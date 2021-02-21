@@ -22,8 +22,6 @@ import com.example.storeadmin.databinding.FragmentEditBinding
 import com.example.storeadmin.databinding.LayoutTopEditToolbarBinding
 import com.example.storeadmin.models.Product
 import com.example.storeadmin.viewmodels.EditViewModel
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.storage.FirebaseStorage
 import com.squareup.picasso.Callback
 import com.squareup.picasso.Picasso
 import java.io.ByteArrayOutputStream
@@ -33,16 +31,15 @@ class EditFragment : Fragment(), View.OnClickListener {
     private lateinit var toolbarBinding: LayoutTopEditToolbarBinding
     private lateinit var navController: NavController
     private lateinit var product: Product
+    private val model: EditViewModel by viewModels()
     private val PERMISSION_CODE = 0
     private val IMAGE_PICK_CODE = 1
-    private val model: EditViewModel by viewModels()
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         binding = FragmentEditBinding.inflate(inflater, container, false)
         toolbarBinding = LayoutTopEditToolbarBinding.bind(binding.root)
-
         return binding.root
     }
 
@@ -55,6 +52,35 @@ class EditFragment : Fragment(), View.OnClickListener {
         super.onViewCreated(view, savedInstanceState)
         navController = Navigation.findNavController(view)
         setupUI()
+        setupObservers()
+    }
+
+    private fun setupObservers() {
+        model.message.observe(viewLifecycleOwner, { message ->
+            if (message.isNotBlank()) {
+                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+            } else
+                Toast.makeText(requireContext(), "Updated", Toast.LENGTH_SHORT).show()
+            binding.progressBar1.visibility = View.INVISIBLE
+            setupEditTexts(true)
+        })
+    }
+
+    override fun onClick(v: View) {
+        when (v.id) {
+            binding.updateB.id -> {
+                updateProduct(product)
+            }
+            toolbarBinding.backB.id -> {
+                navController.navigate(R.id.action_editFragment_to_mainFragment)
+            }
+            binding.selectImageB.id -> {
+                pickImage()
+            }
+            toolbarBinding.deleteB.id -> {
+                deleteProduct(product)
+            }
+        }
     }
 
     private fun setupUI() {
@@ -81,44 +107,30 @@ class EditFragment : Fragment(), View.OnClickListener {
         binding.selectImageB.setOnClickListener(this)
     }
 
-    override fun onClick(v: View) {
-        when (v.id) {
-            binding.updateB.id -> {
-                updateProductOBJ()
-                if (productIsValid(product)) {
-                    if (model.imageName.isEmpty())
-                        updateProduct(product)
-                    else
-                        updateProductWithImage(product, convertImageToByte())
-                } else
-                    produceError(product)
-            }
-            toolbarBinding.backB.id -> {
-                navController.navigate(R.id.action_editFragment_to_mainFragment)
-            }
-            binding.selectImageB.id -> {
-                pickImage()
-            }
-            toolbarBinding.deleteB.id -> {
-                deleteProduct(product)
-            }
-        }
+    private fun setupEditTexts(state: Boolean) {
+        binding.colorsETxt.isEnabled = state
+        binding.materialETxt.isEnabled = state
+        binding.sizeETxt.isEnabled = state
+        binding.priceETxt.isEnabled = state
+        binding.selectImageB.isEnabled = state
+        binding.detailsETxt.isEnabled = state
+        binding.offerETxt.isEnabled = state
     }
 
     private fun deleteProduct(product: Product) {
         setupEditTexts(false)
         binding.progressBar1.visibility = View.VISIBLE
-        FirebaseStorage.getInstance().getReferenceFromUrl(product.image!!).delete()
-            .addOnSuccessListener {
-                product.id?.let {
-                    FirebaseFirestore.getInstance().collection("Products").document(it).delete()
-                        .addOnSuccessListener {
-                            Toast.makeText(requireContext(), "Deleted", Toast.LENGTH_SHORT).show()
-                            binding.progressBar1.visibility = View.INVISIBLE
-                            navController.navigate(R.id.action_editFragment_to_mainFragment)
-                        }
-                }
+        model.deleteProduct(product)
+        model.deletedMessage.observe(viewLifecycleOwner, { message ->
+            if (message.isNotBlank()) {
+                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                setupEditTexts(true)
+            } else {
+                binding.progressBar1.visibility = View.INVISIBLE
+                navController.navigate(R.id.action_editFragment_to_mainFragment)
+                Toast.makeText(requireContext(), "Deleted", Toast.LENGTH_SHORT).show()
             }
+        })
     }
 
     private fun updateProductOBJ() {
@@ -143,20 +155,23 @@ class EditFragment : Fragment(), View.OnClickListener {
         }
     }
 
-    private fun setupEditTexts(state: Boolean) {
-        binding.colorsETxt.isEnabled = state
-        binding.materialETxt.isEnabled = state
-        binding.sizeETxt.isEnabled = state
-        binding.priceETxt.isEnabled = state
-        binding.selectImageB.isEnabled = state
-        binding.detailsETxt.isEnabled = state
-        binding.offerETxt.isEnabled = state
-    }
-
     private fun productIsValid(product: Product): Boolean {
         return product.colors.isNotEmpty() &&
                 product.material.isNotEmpty() &&
                 product.size.isNotEmpty()
+    }
+
+    private fun updateProduct(product: Product) {
+        updateProductOBJ()
+        if (productIsValid(product)) {
+            setupEditTexts(false)
+            binding.progressBar1.visibility = View.VISIBLE
+            if (model.imageName.isEmpty())
+                model.updateProduct(product)
+            else
+                model.updateProductWithImage(product, convertImageToByte())
+        } else
+            produceError(product)
     }
 
     private fun pickImage() {
@@ -188,6 +203,13 @@ class EditFragment : Fragment(), View.OnClickListener {
         startActivityForResult(intent, IMAGE_PICK_CODE)
     }
 
+    private fun convertImageToByte(): ByteArray {
+        val bitmap = (binding.productImg.drawable as BitmapDrawable).bitmap
+        val baos = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos)
+        return baos.toByteArray()
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -215,48 +237,5 @@ class EditFragment : Fragment(), View.OnClickListener {
         }
     }
 
-    private fun convertImageToByte(): ByteArray {
-        val bitmap = (binding.productImg.drawable as BitmapDrawable).bitmap
-        val baos = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos)
-        return baos.toByteArray()
-    }
 
-    private fun updateProduct(product: Product) {
-        binding.progressBar1.visibility = View.VISIBLE
-        setupEditTexts(false)
-        product.id?.let {
-            FirebaseFirestore.getInstance().collection("Products").document(it).set(product)
-                .addOnSuccessListener {
-                    binding.progressBar1.visibility = View.INVISIBLE
-                    setupEditTexts(true)
-                    Toast.makeText(requireContext(), "Updated", Toast.LENGTH_SHORT).show()
-                }
-        }
-    }
-
-    private fun updateProductWithImage(product: Product, image: ByteArray) {
-        binding.progressBar1.visibility = View.VISIBLE
-        setupEditTexts(false)
-        val storageRef =
-            FirebaseStorage.getInstance().reference.child("Images/${model.imageName}")
-        storageRef.putBytes(image).addOnSuccessListener {
-            storageRef.downloadUrl.addOnSuccessListener { uri ->
-                FirebaseStorage.getInstance().getReferenceFromUrl(product.image!!).delete()
-                    .addOnSuccessListener {
-                        model.imageName = ""
-                        product.image = uri.toString()
-                        product.id?.let { id ->
-                            FirebaseFirestore.getInstance().collection("Products").document(id)
-                                .set(product).addOnSuccessListener {
-                                    binding.progressBar1.visibility = View.INVISIBLE
-                                    setupEditTexts(true)
-                                    Toast.makeText(requireContext(), "Updated", Toast.LENGTH_SHORT)
-                                        .show()
-                                }
-                        }
-                    }
-            }
-        }
-    }
 }

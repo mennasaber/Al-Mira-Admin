@@ -23,15 +23,12 @@ import com.example.storeadmin.databinding.FragmentAddProductBinding
 import com.example.storeadmin.databinding.LayoutTopBackToolbarBinding
 import com.example.storeadmin.models.Product
 import com.example.storeadmin.viewmodels.AddProductViewModel
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.storage.FirebaseStorage
 import java.io.ByteArrayOutputStream
 
 class AddProductFragment : Fragment(), View.OnClickListener {
     private lateinit var binding: FragmentAddProductBinding
     private lateinit var toolbarBinding: LayoutTopBackToolbarBinding
     private lateinit var navController: NavController
-    private lateinit var firestore: FirebaseFirestore
     private lateinit var codes: ArrayList<String>
     private val PERMISSION_CODE = 0
     private val IMAGE_PICK_CODE = 1
@@ -42,16 +39,19 @@ class AddProductFragment : Fragment(), View.OnClickListener {
     ): View {
         binding = FragmentAddProductBinding.inflate(inflater, container, false)
         toolbarBinding = LayoutTopBackToolbarBinding.bind(binding.root)
-        firestore = FirebaseFirestore.getInstance()
-        binding.addProductB.setOnClickListener(this)
-        binding.selectImageB.setOnClickListener(this)
-        toolbarBinding.backB.setOnClickListener(this)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         navController = Navigation.findNavController(view)
+        setupUI()
+    }
+
+    private fun setupUI() {
+        binding.addProductB.setOnClickListener(this)
+        binding.selectImageB.setOnClickListener(this)
+        toolbarBinding.backB.setOnClickListener(this)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,8 +62,7 @@ class AddProductFragment : Fragment(), View.OnClickListener {
     override fun onClick(v: View?) {
         when (v?.id) {
             binding.addProductB.id -> {
-                binding.progressBar.visibility = View.VISIBLE
-                saveProduct()
+                checkProduct()
             }
             binding.selectImageB.id -> {
                 pickImage()
@@ -74,11 +73,10 @@ class AddProductFragment : Fragment(), View.OnClickListener {
         }
     }
 
-    private fun saveProduct() {
+    private fun checkProduct() {
         if (binding.priceETxt.text.isNotEmpty() && binding.priceETxt.text.isDigitsOnly()) {
             val product = initializeProduct()
             if (productIsValid(product)) {
-                disableEditTexts()
                 val data: ByteArray = convertImageToByte()
                 pushProduct(data, product)
             } else {
@@ -92,24 +90,18 @@ class AddProductFragment : Fragment(), View.OnClickListener {
     }
 
     private fun pushProduct(data: ByteArray, product: Product) {
-        val storageRef =
-            FirebaseStorage.getInstance().reference.child("Images/${model.imageName}")
-        storageRef.putBytes(data).addOnSuccessListener {
-            storageRef.downloadUrl.addOnSuccessListener {
-                product.image = it.toString()
-                firestore.collection("Products").add(product)
-                    .addOnSuccessListener {
-                        binding.progressBar.visibility = View.INVISIBLE
-                    }
-                    .addOnFailureListener {
-                        binding.progressBar.visibility = View.INVISIBLE
-                        Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
-                    }
-            }.addOnFailureListener {
-                binding.progressBar.visibility = View.INVISIBLE
-                Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+        setupEditTexts(false)
+        binding.progressBar.visibility = View.VISIBLE
+        model.addProduct(data, product)
+        model.message.observe(viewLifecycleOwner, { message ->
+            if (message.isNotBlank()) {
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Product added", Toast.LENGTH_SHORT).show()
             }
-        }
+            binding.progressBar.visibility = View.INVISIBLE
+            setupEditTexts(true)
+        })
     }
 
     private fun convertImageToByte(): ByteArray {
@@ -153,15 +145,15 @@ class AddProductFragment : Fragment(), View.OnClickListener {
         }
     }
 
-    private fun disableEditTexts() {
-        binding.codeETxt.isEnabled = false
-        binding.colorsETxt.isEnabled = false
-        binding.materialETxt.isEnabled = false
-        binding.sizeETxt.isEnabled = false
-        binding.priceETxt.isEnabled = false
-        binding.selectImageB.isEnabled = false
-        binding.detailsETxt.isEnabled = false
-        binding.addProductB.isEnabled = false
+    private fun setupEditTexts(state: Boolean) {
+        binding.codeETxt.isEnabled = state
+        binding.colorsETxt.isEnabled = state
+        binding.materialETxt.isEnabled = state
+        binding.sizeETxt.isEnabled = state
+        binding.priceETxt.isEnabled = state
+        binding.selectImageB.isEnabled = state
+        binding.detailsETxt.isEnabled = state
+        binding.addProductB.isEnabled = state
     }
 
     private fun productIsValid(product: Product): Boolean {
